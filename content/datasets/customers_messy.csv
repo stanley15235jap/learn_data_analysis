@@ -1,0 +1,21 @@
+customer_id,name,age,city,signup_date,total_spent
+C001,Wei Chen,29,Taipei,2023-03-11,4200
+C002,Mia Lin,34,taipei,2023-04-02,1580
+C003,Leo Wu,41,Taichung,2023-01-20,9800
+C004,Nina Huang,,Kaohsiung,2023-05-15,3100
+C005,Oscar Wang,26,TAIPEI,2023-02-08,760
+C006,Peggy Liu,38,Tainan,2023-06-30,5400
+C007,Quinn Yang,-5,Taichung,2023-03-25,2200
+C008,Ray Chen,45,kaohsiung,2023-07-11,8900
+C009,Sandy Kao,31,Taipei ,2023-04-18,
+C010,Tom Su,29,Taipei,2023-03-11,4200
+C011,Uma Ho,150,Tainan,2023-08-02,3300
+C012,Vince Lai,52,Taichung,2023-05-29,6700
+C013,Wendy Fan,27,Kaohsiung,2023-09-14,1950
+C014,Xander Tsai,33,tainan,2023-06-01,4400
+C015,Yvonne Pan,None,Taipei,2023-10-05,2600
+C016,Zack Lo,48,Taichung,2023-07-22,7100
+C017,Amy Chou,36,Kaohsiung,2023-08-19,3900
+C018,Ben Cheng,29,Taipei,2023-03-11,4200
+C019,Cathy Hsu,24,taichung,2023-11-02,1100
+C020,Derek Ma,39,Tainan ,2023-09-30,5600

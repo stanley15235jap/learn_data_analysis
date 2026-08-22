@@ -1,0 +1,11 @@
+employee_id,name,department,salary,years_experience
+1,Alice Chen,Engineering,72000,3
+2,Bob Lin,Sales,55000,5
+3,Carol Wu,Engineering,81000,6
+4,David Huang,Marketing,60000,2
+5,Emma Wang,Sales,58000,4
+6,Frank Liu,Engineering,95000,9
+7,Grace Yang,Marketing,64000,3
+8,Henry Chen,Sales,51000,1
+9,Ivy Kao,Engineering,77000,4
+10,Jack Su,Marketing,69000,5

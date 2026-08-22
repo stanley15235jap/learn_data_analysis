@@ -1,0 +1,16 @@
+order_id,product,category,price,quantity,sale_date
+1001,Wireless Mouse,Electronics,299,2,2024-01-05
+1002,Notebook,Stationery,45,10,2024-01-06
+1003,Wireless Mouse,electronics,299,2,2024-01-05
+1004,Desk Lamp,Home,,1,2024-01-07
+1005,Backpack,Accessories,890,1,2024-01-08
+1006,Notebook,stationery,45,5,2024-01-09
+1007,USB Cable,Electronics,120,3,2024-01-09
+1008,Desk Lamp,Home,399,1,2024-01-10
+1009,Water Bottle,Accessories,150,,2024-01-11
+1001,Wireless Mouse,Electronics,299,2,2024-01-05
+1011,Notebook,Stationery,45,8,2024-01-12
+1012,USB Cable,ELECTRONICS,120,2,2024-01-13
+1013,Backpack,Accessories,890,1,2024-01-14
+1014,Water Bottle,Accessories,150,4,2024-01-15
+1015,Desk Lamp,Home,399,2,
