@@ -38,10 +38,14 @@ st.header(selected_unit.title)
 
 passed_ids = get_passed_exercise_ids(selected_unit.id)
 
+if "touched_exercises" not in st.session_state:
+    st.session_state["touched_exercises"] = set()
+
 for exercise in selected_unit.exercises:
     is_passed = exercise.id in passed_ids
+    touched_this_session = exercise.id in st.session_state["touched_exercises"]
     title = f"{'✅' if is_passed else '⬜'} {exercise.prompt[:40]}{'...' if len(exercise.prompt) > 40 else ''}"
-    with st.expander(title, expanded=not is_passed):
+    with st.expander(title, expanded=(not is_passed or touched_this_session)):
         st.markdown(f"**題目:** {exercise.prompt}")
         if exercise.hint:
             with st.expander("💡 提示"):
@@ -59,6 +63,7 @@ for exercise in selected_unit.exercises:
             with st.spinner("執行並檢查中..."):
                 result = submit_exercise(selected_unit.id, exercise, code)
             st.session_state[result_key] = result
+            st.session_state["touched_exercises"].add(exercise.id)
             st.rerun()
 
         last_result = st.session_state.get(result_key)
