@@ -56,6 +56,10 @@ if idx >= len(questions):
     if st.button("🔁 重新測驗"):
         st.session_state[idx_key] = 0
         st.session_state[result_key] = {}
+        for q in questions:
+            answer_key = f"ans_{selected_unit.id}_{q.id}"
+            for prefix in ("", "submitted_", "correct_"):
+                st.session_state.pop(f"{prefix}{answer_key}", None)
         st.rerun()
     st.stop()
 
