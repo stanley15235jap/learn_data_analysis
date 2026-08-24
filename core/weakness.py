@@ -1,10 +1,12 @@
-"""弱點追蹤與簡易間隔複習排程。"""
+"""弱點追蹤與簡易間隔複習排程。所有查詢都以 user_id 區分帳號。"""
 from datetime import datetime, timedelta, timezone
 from core.db import get_conn, now_iso
 
 
-def update_weakness(conn, concept_id: str, unit_id: str, is_correct: bool):
-    row = conn.execute("SELECT * FROM concept_weakness WHERE concept_id=?", (concept_id,)).fetchone()
+def update_weakness(conn, user_id: int, concept_id: str, unit_id: str, is_correct: bool):
+    row = conn.execute(
+        "SELECT * FROM concept_weakness WHERE user_id=? AND concept_id=?", (user_id, concept_id)
+    ).fetchone()
     now = datetime.now(timezone.utc)
 
     if row is None:
@@ -14,9 +16,9 @@ def update_weakness(conn, concept_id: str, unit_id: str, is_correct: bool):
         next_due = None if is_correct else (now + timedelta(days=1)).isoformat()
         conn.execute(
             """INSERT INTO concept_weakness
-               (concept_id, unit_id, wrong_count, correct_streak, status, next_review_due, last_seen_at)
-               VALUES (?,?,?,?,?,?,?)""",
-            (concept_id, unit_id, wrong_count, correct_streak, status, next_due, now.isoformat()),
+               (user_id, concept_id, unit_id, wrong_count, correct_streak, status, next_review_due, last_seen_at)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (user_id, concept_id, unit_id, wrong_count, correct_streak, status, next_due, now.isoformat()),
         )
         return
 
@@ -46,44 +48,47 @@ def update_weakness(conn, concept_id: str, unit_id: str, is_correct: bool):
     conn.execute(
         """UPDATE concept_weakness
            SET unit_id=?, wrong_count=?, correct_streak=?, status=?, next_review_due=?, last_seen_at=?
-           WHERE concept_id=?""",
-        (unit_id, wrong_count, correct_streak, status, next_due, now.isoformat(), concept_id),
+           WHERE user_id=? AND concept_id=?""",
+        (unit_id, wrong_count, correct_streak, status, next_due, now.isoformat(), user_id, concept_id),
     )
 
 
-def get_weakness_row(concept_id: str):
+def get_weakness_row(user_id: int, concept_id: str):
     conn = get_conn()
-    row = conn.execute("SELECT * FROM concept_weakness WHERE concept_id=?", (concept_id,)).fetchone()
+    row = conn.execute(
+        "SELECT * FROM concept_weakness WHERE user_id=? AND concept_id=?", (user_id, concept_id)
+    ).fetchone()
     conn.close()
     return row
 
 
-def get_all_weak_concepts():
-    """回傳所有需要注意的 concept(needs_review 或 recovering),依到期日排序。"""
+def get_all_weak_concepts(user_id: int):
+    """回傳這個帳號所有需要注意的 concept(needs_review 或 recovering),依到期日排序。"""
     conn = get_conn()
     rows = conn.execute(
         """SELECT * FROM concept_weakness
-           WHERE status IN ('needs_review', 'recovering')
-           ORDER BY (next_review_due IS NULL), next_review_due ASC"""
+           WHERE user_id=? AND status IN ('needs_review', 'recovering')
+           ORDER BY (next_review_due IS NULL), next_review_due ASC""",
+        (user_id,),
     ).fetchall()
     conn.close()
     return rows
 
 
-def get_due_reviews():
+def get_due_reviews(user_id: int):
     """回傳已到複習時間(或從未複習過的 needs_review)的項目。"""
     now = now_iso()
-    all_weak = get_all_weak_concepts()
+    all_weak = get_all_weak_concepts(user_id)
     due = [r for r in all_weak if r["next_review_due"] is None or r["next_review_due"] <= now]
     upcoming = [r for r in all_weak if r not in due]
     return due, upcoming
 
 
-def unit_has_unresolved_weakness(unit_id: str) -> bool:
+def unit_has_unresolved_weakness(user_id: int, unit_id: str) -> bool:
     conn = get_conn()
     row = conn.execute(
-        "SELECT COUNT(*) c FROM concept_weakness WHERE unit_id=? AND status IN ('needs_review','recovering')",
-        (unit_id,),
+        "SELECT COUNT(*) c FROM concept_weakness WHERE user_id=? AND unit_id=? AND status IN ('needs_review','recovering')",
+        (user_id, unit_id),
     ).fetchone()
     conn.close()
     return row["c"] > 0

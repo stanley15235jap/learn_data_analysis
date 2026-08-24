@@ -1,12 +1,14 @@
 import streamlit as st
 from core.db import init_db
+from core.auth import require_login
 from core.content_loader import all_units_in_order
 from core.executor import run_code
 from core.ui import render_sidebar, code_editor
 
 st.set_page_config(page_title="實作區 | 學習工作台", page_icon="💻", layout="wide")
 init_db()
-render_sidebar()
+user = require_login()
+render_sidebar(user)
 
 st.title("💻 Python 實作區")
 st.caption("自由寫程式、實際執行、看輸出結果。程式碼會在你自己的電腦上真的被執行(子行程,有逾時保護)。")

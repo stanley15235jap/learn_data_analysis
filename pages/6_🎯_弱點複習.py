@@ -1,5 +1,6 @@
 import streamlit as st
 from core.db import init_db
+from core.auth import require_login
 from core.content_loader import all_concepts
 from core.weakness import get_due_reviews
 from core.grading import submit_quiz_answer
@@ -7,7 +8,9 @@ from core.ui import render_sidebar
 
 st.set_page_config(page_title="弱點複習 | 學習工作台", page_icon="🎯", layout="wide")
 init_db()
-render_sidebar()
+user = require_login()
+user_id = user["id"]
+render_sidebar(user)
 
 st.title("🎯 弱點複習")
 st.caption("看過不等於學會。這裡列出答錯過、還沒穩定答對的知識點,依到期時間排序。")
@@ -18,7 +21,7 @@ if flash:
     (st.success if is_correct else st.error)(text)
 
 CONCEPT_LOOKUP = all_concepts()
-due, upcoming = get_due_reviews()
+due, upcoming = get_due_reviews(user_id)
 
 if not due and not upcoming:
     st.success("目前沒有需要複習的弱點,狀態很好!繼續保持。")
@@ -61,7 +64,7 @@ if due:
                 user_answer = st.text_input("你的答案", key=answer_key)
 
             if st.button("送出", key=f"review_submit_{concept.id}", disabled=(user_answer is None or user_answer == "")):
-                is_correct = submit_quiz_answer(unit.id, q, user_answer)
+                is_correct = submit_quiz_answer(user_id, unit.id, q, user_answer)
                 msg = "✅ 答對了!再答對一次同一個知識點就會標記為已掌握。" if is_correct else "❌ 還沒答對,再看一次上面的說明,晚點再試試看。"
                 st.session_state["flash_message"] = (is_correct, f"{msg}\n\n**說明:** {q.explanation}")
                 st.rerun()

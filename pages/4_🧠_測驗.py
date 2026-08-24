@@ -1,11 +1,14 @@
 import streamlit as st
 from core.db import init_db
+from core.auth import require_login
 from core.content_loader import STAGE_ORDER, STAGE_LABELS, units_for_stage, get_unit
 from core.grading import submit_quiz_answer
 from core.ui import render_sidebar
 
 st.set_page_config(page_title="測驗 | 學習工作台", page_icon="🧠", layout="wide")
 init_db()
+user = require_login()
+user_id = user["id"]
 
 default_unit_id = st.session_state.get("target_unit_id")
 if default_unit_id is None or get_unit(default_unit_id) is None:
@@ -32,7 +35,7 @@ choice = st.selectbox("選擇單元", list(options.keys()), index=default_index,
 selected_unit = get_unit(options[choice])
 st.session_state["target_unit_id"] = selected_unit.id
 
-render_sidebar(active_unit_id=selected_unit.id)
+render_sidebar(user, active_unit_id=selected_unit.id)
 st.markdown("---")
 st.header(f"測驗:{selected_unit.title}")
 
@@ -90,7 +93,7 @@ with st.container(border=True):
 
     if not submitted:
         if st.button("送出答案", type="primary", disabled=(user_answer is None or user_answer == "")):
-            is_correct = submit_quiz_answer(selected_unit.id, q, user_answer)
+            is_correct = submit_quiz_answer(user_id, selected_unit.id, q, user_answer)
             st.session_state[result_key][q.id] = is_correct
             st.session_state[f"submitted_{answer_key}"] = True
             st.session_state[f"correct_{answer_key}"] = is_correct

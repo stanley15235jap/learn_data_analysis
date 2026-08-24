@@ -1,11 +1,14 @@
 import streamlit as st
 from core.db import init_db, get_passed_exercise_ids
+from core.auth import require_login
 from core.content_loader import STAGE_ORDER, STAGE_LABELS, units_for_stage, get_unit
 from core.grading import submit_exercise
 from core.ui import render_sidebar, code_editor
 
 st.set_page_config(page_title="練習區 | 學習工作台", page_icon="✍️", layout="wide")
 init_db()
+user = require_login()
+user_id = user["id"]
 
 default_unit_id = st.session_state.get("target_unit_id")
 if default_unit_id is None or get_unit(default_unit_id) is None:
@@ -32,11 +35,11 @@ choice = st.selectbox("選擇單元", list(options.keys()), index=default_index,
 selected_unit = get_unit(options[choice])
 st.session_state["target_unit_id"] = selected_unit.id
 
-render_sidebar(active_unit_id=selected_unit.id)
+render_sidebar(user, active_unit_id=selected_unit.id)
 st.markdown("---")
 st.header(selected_unit.title)
 
-passed_ids = get_passed_exercise_ids(selected_unit.id)
+passed_ids = get_passed_exercise_ids(user_id, selected_unit.id)
 
 if "touched_exercises" not in st.session_state:
     st.session_state["touched_exercises"] = set()
@@ -61,7 +64,7 @@ for exercise in selected_unit.exercises:
         if st.button("▶️ 執行並檢查", key=f"submit_{exercise.id}"):
             st.session_state[code_key] = code
             with st.spinner("執行並檢查中..."):
-                result = submit_exercise(selected_unit.id, exercise, code)
+                result = submit_exercise(user_id, selected_unit.id, exercise, code)
             st.session_state[result_key] = result
             st.session_state["touched_exercises"].add(exercise.id)
             st.rerun()

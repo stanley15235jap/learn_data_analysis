@@ -1,11 +1,14 @@
 import streamlit as st
 from core.db import init_db, mark_unit_opened
+from core.auth import require_login
 from core.content_loader import STAGE_ORDER, STAGE_LABELS, units_for_stage, get_unit
 from core.progress import compute_unit_status
 from core.ui import render_sidebar, status_badge_html, render_walkthrough
 
 st.set_page_config(page_title="課程學習 | 學習工作台", page_icon="📖", layout="wide")
 init_db()
+user = require_login()
+user_id = user["id"]
 
 default_unit_id = st.session_state.get("target_unit_id")
 if default_unit_id is None or get_unit(default_unit_id) is None:
@@ -27,9 +30,9 @@ choice = st.selectbox("選擇單元", list(options.keys()), index=default_index,
 selected_unit = get_unit(options[choice])
 st.session_state["target_unit_id"] = selected_unit.id
 
-render_sidebar(active_unit_id=selected_unit.id)
-mark_unit_opened(selected_unit.id)
-status = compute_unit_status(selected_unit)
+render_sidebar(user, active_unit_id=selected_unit.id)
+mark_unit_opened(user_id, selected_unit.id)
+status = compute_unit_status(user_id, selected_unit)
 
 st.markdown("---")
 h1, h2 = st.columns([4, 1])

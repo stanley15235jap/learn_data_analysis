@@ -57,30 +57,39 @@ def status_badge_html(status: str) -> str:
     return f'<span class="status-badge" style="background:{color}">{label}</span>'
 
 
-def render_sidebar(active_unit_id: str = None):
+def render_sidebar(user, active_unit_id: str = None):
     inject_base_css()
+    user_id = user["id"]
     with st.sidebar:
+        st.markdown(f"**{user['username']}**　`{'管理員' if user['role'] == 'admin' else '一般帳號'}`")
+        if st.button("登出", key="sidebar_logout", use_container_width=True):
+            from core.auth import logout
+
+            logout()
+            st.rerun()
+        st.markdown("---")
+
         st.markdown("### 學習路線")
 
-        due, _ = get_due_reviews()
+        due, _ = get_due_reviews(user_id)
         if due:
             st.markdown(f"🎯 **{len(due)} 個弱點待複習** — [前往複習](/弱點複習)")
 
         for stage in STAGE_ORDER:
             units = units_for_stage(stage)
-            prog = stage_progress(units)
+            prog = stage_progress(user_id, units)
             st.markdown(f"**{STAGE_LABELS[stage]}** · {prog['percent']}%")
             st.progress(prog["percent"] / 100)
 
             gate = get_gate_for_stage_entry(stage)
             if gate is not None:
-                gate_row = get_latest_gate_result(gate["stage"])
+                gate_row = get_latest_gate_result(user_id, gate["stage"])
                 passed = bool(gate_row["passed"]) if gate_row else False
                 icon = "✅" if passed else "⭕"
                 st.caption(f"{icon} {gate['title']}（可自由挑戰,非強制）")
 
             for u in units:
-                status = compute_unit_status(u)
+                status = compute_unit_status(user_id, u)
                 marker = "➤ " if u.id == active_unit_id else ""
                 c1, c2 = st.columns([3, 1])
                 if c1.button(marker + u.title, key=f"sidebar_nav_{u.id}", use_container_width=True):

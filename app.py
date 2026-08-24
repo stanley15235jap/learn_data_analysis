@@ -1,5 +1,6 @@
 import streamlit as st
 from core.db import init_db
+from core.auth import require_login
 from core.content_loader import STAGE_ORDER, STAGE_LABELS, units_for_stage
 from core.progress import compute_unit_status, stage_progress, next_recommended_unit
 from core.weakness import get_due_reviews
@@ -7,7 +8,9 @@ from core.ui import render_sidebar, status_badge_html
 
 st.set_page_config(page_title="數據分析學習工作台", page_icon="📊", layout="wide")
 init_db()
-render_sidebar()
+user = require_login()
+user_id = user["id"]
+render_sidebar(user)
 
 st.title("📊 數據分析 × 機器學習學習工作台")
 st.caption("第一階段:Python 基礎 → NumPy → Pandas")
@@ -18,7 +21,7 @@ recommend_kind = None  # "unit" | "capstone"
 
 for stage in STAGE_ORDER:
     units = units_for_stage(stage)
-    nxt = next_recommended_unit(units)
+    nxt = next_recommended_unit(user_id, units)
     if nxt is not None:
         recommendation = nxt
         recommend_kind = "unit"
@@ -26,7 +29,7 @@ for stage in STAGE_ORDER:
 else:
     recommend_kind = "capstone"
 
-due, upcoming = get_due_reviews()
+due, upcoming = get_due_reviews(user_id)
 
 col1, col2 = st.columns([2, 1])
 
@@ -51,7 +54,7 @@ with col2:
     st.subheader("整體進度")
     for stage in STAGE_ORDER:
         units = units_for_stage(stage)
-        prog = stage_progress(units)
+        prog = stage_progress(user_id, units)
         st.markdown(f"**{STAGE_LABELS[stage]}**")
         st.progress(prog["percent"] / 100, text=f"{prog['counts']['mastered']}/{prog['total']} 已掌握")
 
@@ -63,7 +66,7 @@ for tab, stage in zip(tabs, STAGE_ORDER):
     with tab:
         units = units_for_stage(stage)
         for u in units:
-            status = compute_unit_status(u)
+            status = compute_unit_status(user_id, u)
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.markdown(f"**{u.title}**")
             c1.caption(u.summary)

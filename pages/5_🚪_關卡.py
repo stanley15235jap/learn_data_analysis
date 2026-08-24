@@ -1,5 +1,6 @@
 import streamlit as st
 from core.db import init_db, get_latest_gate_result, upsert_gate_result
+from core.auth import require_login
 from content.gates import GATES, PASS_THRESHOLD
 from core.grading import grade_answer
 from core.db import get_conn, insert_quiz_attempt
@@ -16,7 +17,9 @@ def owning_unit_id(concept_id: str) -> str:
 
 st.set_page_config(page_title="關卡 | 學習工作台", page_icon="🚪", layout="wide")
 init_db()
-render_sidebar()
+user = require_login()
+user_id = user["id"]
+render_sidebar(user)
 
 st.title("🚪 Stage Gate 關卡")
 st.caption("不是看完最後一頁就自動解鎖下一階段——通過關卡測驗,才能確認你真的準備好了。")
@@ -26,7 +29,7 @@ gate_labels = [GATES[k]["title"] for k in gate_keys]
 choice = st.selectbox("選擇關卡", gate_labels)
 gate = GATES[gate_keys[gate_labels.index(choice)]]
 
-latest = get_latest_gate_result(gate["stage"])
+latest = get_latest_gate_result(user_id, gate["stage"])
 if latest:
     status_text = "✅ 已通過" if latest["passed"] else "❌ 尚未通過"
     st.markdown(f"最近一次結果:{status_text}(分數 {latest['score']:.0%})")
@@ -49,7 +52,7 @@ if idx >= len(questions):
     total = len(questions)
     score = correct / total
     passed = score >= PASS_THRESHOLD
-    upsert_gate_result(gate["stage"], passed, score)
+    upsert_gate_result(user_id, gate["stage"], passed, score)
 
     if passed:
         st.success(f"🎉 通過關卡!分數 {score:.0%}(門檻 {PASS_THRESHOLD:.0%})。下一個階段已經解鎖。")
@@ -64,6 +67,10 @@ if idx >= len(questions):
     if st.button("🔁 重新挑戰關卡"):
         st.session_state[idx_key] = 0
         st.session_state[result_key] = {}
+        for q in questions:
+            answer_key = f"gate_ans_{gate['stage']}_{q.id}"
+            for prefix in ("", "gate_submitted_", "gate_correct_"):
+                st.session_state.pop(f"{prefix}{answer_key}", None)
         st.rerun()
     st.stop()
 
@@ -97,8 +104,8 @@ with st.container(border=True):
             is_correct = grade_answer(q, user_answer)
             conn = get_conn()
             unit_id = owning_unit_id(q.concept_id)
-            insert_quiz_attempt(conn, f"gate::{gate['stage']}", q.id, q.concept_id, is_correct, user_answer)
-            update_weakness(conn, q.concept_id, unit_id, is_correct)
+            insert_quiz_attempt(conn, user_id, f"gate::{gate['stage']}", q.id, q.concept_id, is_correct, user_answer)
+            update_weakness(conn, user_id, q.concept_id, unit_id, is_correct)
             conn.commit()
             conn.close()
             st.session_state[result_key][q.id] = is_correct

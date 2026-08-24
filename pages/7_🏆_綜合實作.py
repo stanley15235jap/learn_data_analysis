@@ -1,5 +1,6 @@
 import streamlit as st
 from core.db import init_db, get_all_capstone_steps, upsert_capstone_step
+from core.auth import require_login
 from core.content_loader import CAPSTONE_STEPS, CAPSTONE_META, all_units_in_order, all_concepts
 from core.executor import run_exercise
 from core.progress import capstone_readiness_summary
@@ -7,12 +8,14 @@ from core.ui import render_sidebar, code_editor
 
 st.set_page_config(page_title="綜合實作 | 學習工作台", page_icon="🏆", layout="wide")
 init_db()
-render_sidebar()
+user = require_login()
+user_id = user["id"]
+render_sidebar(user)
 
 st.title("🏆 " + CAPSTONE_META["title"])
 st.caption(CAPSTONE_META["description"])
 
-step_rows = get_all_capstone_steps()
+step_rows = get_all_capstone_steps(user_id)
 passed_map = {sid: bool(row["passed"]) for sid, row in step_rows.items()}
 
 all_passed = all(passed_map.get(s.id, False) for s in CAPSTONE_STEPS)
@@ -51,7 +54,7 @@ for i, step in enumerate(CAPSTONE_STEPS):
             st.session_state[code_key] = code
             with st.spinner("執行中..."):
                 result = run_exercise(code, step.checker_code)
-            upsert_capstone_step(step.id, "passed" if result["passed"] else "attempted", code, result["passed"], result["message"])
+            upsert_capstone_step(user_id, step.id, "passed" if result["passed"] else "attempted", code, result["passed"], result["message"])
             st.session_state[cap_result_key] = result
             st.rerun()
 
@@ -68,7 +71,7 @@ st.markdown("---")
 
 if all_passed:
     st.success("🎉 恭喜完成 Stage 1 綜合實作!以下是根據你目前所有學習紀錄產生的總結報告。")
-    summary = capstone_readiness_summary(all_units_in_order(), all_concepts())
+    summary = capstone_readiness_summary(user_id, all_units_in_order(), all_concepts())
 
     c1, c2 = st.columns(2)
     with c1:
