@@ -34,7 +34,7 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS unit_progress (
-            user_id INTEGER NOT NULL,
+            user_id INTEGER,
             unit_id TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'in_progress',
             opened_at TEXT,
@@ -65,7 +65,7 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS concept_weakness (
-            user_id INTEGER NOT NULL,
+            user_id INTEGER,
             concept_id TEXT NOT NULL,
             unit_id TEXT,
             wrong_count INTEGER DEFAULT 0,
@@ -86,7 +86,7 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS capstone_progress (
-            user_id INTEGER NOT NULL,
+            user_id INTEGER,
             step_id TEXT NOT NULL,
             status TEXT DEFAULT 'not_started',
             submitted_code TEXT,
@@ -98,7 +98,100 @@ def init_db():
         """
     )
     conn.commit()
+    _migrate_add_missing_columns(conn)
+    conn.commit()
     conn.close()
+
+
+def _migrate_add_missing_columns(conn):
+    """CREATE TABLE IF NOT EXISTS 不會替『已存在的舊表』補上新欄位或改變 PRIMARY KEY——
+    例如帳號系統上線前就已經在某個環境(如 Streamlit Cloud 先前部署)建立過的表,
+    會缺少 user_id 欄位,舊的單欄位 PRIMARY KEY 也無法單靠 ALTER TABLE 改成複合鍵。
+    這裡分兩種情況處理,讓舊資料庫檔案也能安全升級成帳號系統的新結構。
+    """
+    # 只需要補欄位、不涉及 PRIMARY KEY 變動的表(原本就是 surrogate id 當主鍵)
+    simple_tables = {
+        "exercise_submissions": [("user_id", "INTEGER")],
+        "quiz_attempts": [("user_id", "INTEGER")],
+        "gate_results": [("user_id", "INTEGER")],
+    }
+    for table, columns in simple_tables.items():
+        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        for column, decl in columns:
+            if column not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+    # 原本用單一欄位當 PRIMARY KEY、現在要改成 (user_id, X) 複合鍵的表,需要整表重建
+    composite_pk_tables = {
+        "unit_progress": {
+            "pk": ["user_id", "unit_id"],
+            "columns": ["user_id", "unit_id", "status", "opened_at", "last_updated"],
+            "create": """
+                CREATE TABLE unit_progress (
+                    user_id INTEGER,
+                    unit_id TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'in_progress',
+                    opened_at TEXT,
+                    last_updated TEXT,
+                    PRIMARY KEY (user_id, unit_id)
+                )
+            """,
+        },
+        "concept_weakness": {
+            "pk": ["user_id", "concept_id"],
+            "columns": ["user_id", "concept_id", "unit_id", "wrong_count", "correct_streak", "status", "next_review_due", "last_seen_at"],
+            "create": """
+                CREATE TABLE concept_weakness (
+                    user_id INTEGER,
+                    concept_id TEXT NOT NULL,
+                    unit_id TEXT,
+                    wrong_count INTEGER DEFAULT 0,
+                    correct_streak INTEGER DEFAULT 0,
+                    status TEXT DEFAULT 'resolved',
+                    next_review_due TEXT,
+                    last_seen_at TEXT,
+                    PRIMARY KEY (user_id, concept_id)
+                )
+            """,
+        },
+        "capstone_progress": {
+            "pk": ["user_id", "step_id"],
+            "columns": ["user_id", "step_id", "status", "submitted_code", "passed", "notes", "updated_at"],
+            "create": """
+                CREATE TABLE capstone_progress (
+                    user_id INTEGER,
+                    step_id TEXT NOT NULL,
+                    status TEXT DEFAULT 'not_started',
+                    submitted_code TEXT,
+                    passed INTEGER,
+                    notes TEXT,
+                    updated_at TEXT,
+                    PRIMARY KEY (user_id, step_id)
+                )
+            """,
+        },
+    }
+
+    for table, spec in composite_pk_tables.items():
+        info = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        existing_cols = {row["name"] for row in info}
+        current_pk = [row["name"] for row in sorted(info, key=lambda r: r["pk"]) if row["pk"] > 0]
+
+        if "user_id" in existing_cols and current_pk == spec["pk"]:
+            continue  # 已經是新結構,不用動
+
+        # 舊表缺 user_id 或 PRIMARY KEY 不對:整表重建,舊資料的 user_id 補 NULL(視為孤兒資料,
+        # 不會出現在任何帳號的查詢結果裡,但也不會被刪除)。
+        conn.execute(f"ALTER TABLE {table} RENAME TO {table}_old")
+        conn.execute(spec["create"])
+        old_cols = {row["name"] for row in conn.execute(f"PRAGMA table_info({table}_old)").fetchall()}
+        select_parts = [
+            (col if col in old_cols else "NULL") for col in spec["columns"]
+        ]
+        insert_cols = ", ".join(spec["columns"])
+        select_expr = ", ".join(select_parts)
+        conn.execute(f"INSERT INTO {table} ({insert_cols}) SELECT {select_expr} FROM {table}_old")
+        conn.execute(f"DROP TABLE {table}_old")
 
 
 # ---------- unit_progress ----------
