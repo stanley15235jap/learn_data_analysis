@@ -1,15 +1,14 @@
 import streamlit as st
 import pandas as pd
-from core.db import init_db, get_all_capstone_steps
-from core.auth import require_login
+from core.db import get_all_capstone_steps
+from core.auth import bootstrap_app
 from core.content_loader import STAGE_ORDER, STAGE_LABELS, units_for_stage, CAPSTONE_STEPS
 from core.progress import compute_unit_status, stage_progress, STATUS_LABELS
 from core.weakness import get_due_reviews, get_all_weak_concepts
 from core.ui import render_sidebar
 
 st.set_page_config(page_title="學習進度 | 學習工作台", page_icon="📊", layout="wide")
-init_db()
-user = require_login()
+user = bootstrap_app()
 user_id = user["id"]
 render_sidebar(user)
 

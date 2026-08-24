@@ -1,14 +1,13 @@
 import streamlit as st
-from core.db import init_db, get_all_capstone_steps, upsert_capstone_step
-from core.auth import require_login
+from core.db import get_all_capstone_steps, upsert_capstone_step
+from core.auth import bootstrap_app
 from core.content_loader import CAPSTONE_STEPS, CAPSTONE_META, all_units_in_order, all_concepts
 from core.executor import run_exercise
 from core.progress import capstone_readiness_summary
 from core.ui import render_sidebar, code_editor
 
 st.set_page_config(page_title="綜合實作 | 學習工作台", page_icon="🏆", layout="wide")
-init_db()
-user = require_login()
+user = bootstrap_app()
 user_id = user["id"]
 render_sidebar(user)
 

@@ -1,13 +1,12 @@
 import streamlit as st
-from core.db import init_db, mark_unit_opened
-from core.auth import require_login
+from core.db import mark_unit_opened
+from core.auth import bootstrap_app
 from core.content_loader import STAGE_ORDER, STAGE_LABELS, units_for_stage, get_unit
 from core.progress import compute_unit_status
 from core.ui import render_sidebar, status_badge_html, render_walkthrough
 
 st.set_page_config(page_title="課程學習 | 學習工作台", page_icon="📖", layout="wide")
-init_db()
-user = require_login()
+user = bootstrap_app()
 user_id = user["id"]
 
 default_unit_id = st.session_state.get("target_unit_id")

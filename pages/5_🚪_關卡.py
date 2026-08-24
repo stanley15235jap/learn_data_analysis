@@ -1,6 +1,6 @@
 import streamlit as st
-from core.db import init_db, get_latest_gate_result, upsert_gate_result
-from core.auth import require_login
+from core.db import get_latest_gate_result, upsert_gate_result
+from core.auth import bootstrap_app
 from content.gates import GATES, PASS_THRESHOLD
 from core.grading import grade_answer
 from core.db import get_conn, insert_quiz_attempt
@@ -16,8 +16,7 @@ def owning_unit_id(concept_id: str) -> str:
     return entry[1].id if entry else concept_id
 
 st.set_page_config(page_title="關卡 | 學習工作台", page_icon="🚪", layout="wide")
-init_db()
-user = require_login()
+user = bootstrap_app()
 user_id = user["id"]
 render_sidebar(user)
 

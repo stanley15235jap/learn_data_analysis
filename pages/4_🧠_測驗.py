@@ -1,13 +1,11 @@
 import streamlit as st
-from core.db import init_db
-from core.auth import require_login
+from core.auth import bootstrap_app
 from core.content_loader import STAGE_ORDER, STAGE_LABELS, units_for_stage, get_unit
 from core.grading import submit_quiz_answer
 from core.ui import render_sidebar
 
 st.set_page_config(page_title="測驗 | 學習工作台", page_icon="🧠", layout="wide")
-init_db()
-user = require_login()
+user = bootstrap_app()
 user_id = user["id"]
 
 default_unit_id = st.session_state.get("target_unit_id")

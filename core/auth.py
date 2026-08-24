@@ -9,10 +9,11 @@
 import hashlib
 import hmac
 import secrets
+import traceback
 
 import streamlit as st
 
-from core.db import get_conn, now_iso
+from core.db import get_conn, now_iso, init_db as _init_db
 
 PBKDF2_ITERATIONS = 200_000
 
@@ -136,6 +137,33 @@ def require_login():
         _render_bootstrap_form()
     else:
         _render_login_form()
+    st.stop()
+
+
+def bootstrap_app():
+    """整合 init_db() + require_login(),並把資料庫/查詢失敗的完整錯誤直接印在畫面上。
+
+    Streamlit Community Cloud 預設會把未捕捉例外的錯誤訊息遮蔽(redacted),
+    這裡改成我們自己攔截、自己印出來,才看得到真正的錯誤內容以便除錯。
+    """
+    try:
+        _init_db()
+    except Exception:
+        st.error("資料庫初始化失敗,以下是完整錯誤訊息(除錯用):")
+        st.code(traceback.format_exc())
+        st.stop()
+
+    try:
+        user = current_user()
+        if user is not None:
+            return user
+        if not any_users_exist():
+            _render_bootstrap_form()
+        else:
+            _render_login_form()
+    except Exception:
+        st.error("登入檢查時發生錯誤,以下是完整錯誤訊息(除錯用):")
+        st.code(traceback.format_exc())
     st.stop()
 
 

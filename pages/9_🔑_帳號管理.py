@@ -1,7 +1,6 @@
 import streamlit as st
-from core.db import init_db
 from core.auth import (
-    require_login,
+    bootstrap_app,
     list_users,
     create_user,
     username_exists,
@@ -11,8 +10,7 @@ from core.auth import (
 from core.ui import render_sidebar
 
 st.set_page_config(page_title="帳號管理 | 學習工作台", page_icon="🔑", layout="wide")
-init_db()
-user = require_login()
+user = bootstrap_app()
 render_sidebar(user)
 
 st.title("🔑 帳號管理")

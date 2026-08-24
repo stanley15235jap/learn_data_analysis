@@ -1,14 +1,12 @@
 import streamlit as st
-from core.db import init_db
-from core.auth import require_login
+from core.auth import bootstrap_app
 from core.content_loader import STAGE_ORDER, STAGE_LABELS, units_for_stage
 from core.progress import compute_unit_status, stage_progress, next_recommended_unit
 from core.weakness import get_due_reviews
 from core.ui import render_sidebar, status_badge_html
 
 st.set_page_config(page_title="數據分析學習工作台", page_icon="📊", layout="wide")
-init_db()
-user = require_login()
+user = bootstrap_app()
 user_id = user["id"]
 render_sidebar(user)
 
